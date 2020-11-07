@@ -27,6 +27,8 @@ off_t mi_piece_length(const char *p);
 struct mi_announce *mi_announce(const char *p);
 void mi_free_announce(struct mi_announce *ann);
 
+struct mi_urls *mi_webseed_urls(const char *p);
+
 size_t mi_nfiles(const char *p);
 struct mi_file *mi_files(const char *p);
 void mi_free_files(unsigned nfiles, struct mi_file *files);

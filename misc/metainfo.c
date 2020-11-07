@@ -107,6 +107,27 @@ error:
     return NULL;
 }
 
+struct mi_urls *
+mi_webseed_urls(const char *p)
+{
+    const char *wslist;
+    struct mi_urls *urls;
+
+    if ((wslist = benc_dget_lst(p, "url-list")) != NULL) {
+        printf("here somehow\n");
+        urls = calloc(1, sizeof(urls));
+        if (urls == NULL)
+            return NULL;
+
+        if (mi_urls(urls, wslist) != NULL) {
+            return urls;
+        }
+    }
+
+    free(urls);
+    return NULL;
+}
+
 struct mi_announce *
 mi_announce(const char *p)
 {
@@ -357,6 +378,7 @@ mi_test(const char *p, size_t size)
     if (benc_validate(p, size) != 0 || !benc_isdct(p))
         return 0;
 
+    /*
     if ((alist = benc_dget_any(p, "announce-list")) != NULL) {
         if (!benc_islst(alist))
             return 0;
@@ -364,6 +386,7 @@ mi_test(const char *p, size_t size)
             return 0;
     } else if (benc_dget_mem(p, "announce", NULL) == NULL)
         return 0;
+        */
 
     if ((info = benc_dget_dct(p, "info")) == NULL)
         return 0;

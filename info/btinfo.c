@@ -32,16 +32,26 @@ print_metainfo(const char *mi)
     unsigned nfiles = mi_nfiles(mi);
     struct mi_file *files = mi_files(mi);
     struct mi_announce *ann = mi_announce(mi);
+    struct mi_urls *wsurls = mi_webseed_urls(mi);
     printf("Name: %s\n", name);
     printf("Info hash: %s\n", bin2hex(mi_info_hash(mi, hash), hex, 20));
-    printf("Tracker URLs: [ ");
-    for (int i = 0; i < ann->ntiers; i++) {
-        printf("[ ");
-        for (int j = 0; j < ann->tiers[i].nurls; j++)
-            printf("%s ", ann->tiers[i].urls[j]);
-        printf("] ");
+    if (ann != NULL) {
+        printf("Tracker URLs: [ ");
+        for (int i = 0; i < ann->ntiers; i++) {
+            printf("[ ");
+            for (int j = 0; j < ann->tiers[i].nurls; j++)
+                printf("%s ", ann->tiers[i].urls[j]);
+            printf("] ");
+        }
+        printf("]\n");
     }
-    printf("]\n");
+    if (wsurls != NULL) {
+        printf("WebSeed URLS: [ ");
+        for (int i = 0; i < wsurls->nurls; i++) {
+            printf("%s ", wsurls->urls[i]);
+        }
+        printf("]\n");
+    }
     printf("Number of pieces: %lu\n", (unsigned long)mi_npieces(mi));
     printf("Piece size: %lld\n", (long long)mi_piece_length(mi));
     printf("Total size: %lld\n", (long long)mi_total_length(mi));
@@ -54,7 +64,8 @@ print_metainfo(const char *mi)
     printf("\n");
     free(name);
     mi_free_files(nfiles, files);
-    mi_free_announce(ann);
+    if (ann != NULL)
+        mi_free_announce(ann);
 }
 
 int
