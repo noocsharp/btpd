@@ -6,14 +6,14 @@ struct mi_file {
     off_t length;
 };
 
-struct mi_tier {
+struct mi_urls {
     int nurls;
     char **urls;
 };
 
 struct mi_announce {
     int ntiers;
-    struct mi_tier *tiers;
+    struct mi_urls *tiers;
 };
 
 char *mi_name(const char *p);

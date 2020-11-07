@@ -53,9 +53,10 @@ mi_free_announce(struct mi_announce *ann)
     if (ann->tiers != NULL) {
         for (int ti = 0; ti < ann->ntiers; ti++)
             if (ann->tiers[ti].urls != NULL) {
-                for (int ui = 0; ui < ann->tiers[ti].nurls; ui++)
+                for (int ui = 0; ui < ann->tiers[ti].nurls; ui++) {
                     if (ann->tiers[ti].urls[ui] != NULL)
                         free(ann->tiers[ti].urls[ui]);
+                }
                 free(ann->tiers[ti].urls);
             }
         free(ann->tiers);
@@ -76,56 +77,77 @@ mi_shuffle_announce(struct mi_announce *ann)
     }
 }
 
+struct mi_urls *
+mi_urls(struct mi_urls *dest, const char *urllist)
+{
+    int i;
+    const char *url;
+    struct mi_urls urls;
+
+    urls.nurls = benc_nelems(urllist);
+    urls.urls = calloc(urls.nurls, sizeof(urls.urls));
+    if (urls.urls == NULL)
+        return NULL;
+
+    i = 0; url = benc_first(urllist);
+    while (url != NULL) {
+        if ((urls.urls[i] = benc_str(url, NULL, NULL)) == NULL)
+            goto error;
+
+        i++; url = benc_next(url);
+    }
+
+    memcpy(dest, &urls, sizeof(urls));
+    return dest;
+
+error:
+    if (urls.urls)
+        free(urls.urls);
+
+    return NULL;
+}
+
 struct mi_announce *
 mi_announce(const char *p)
 {
     int ti, ui;
-    const char *alst, *ulst, *url;
-    struct mi_announce *res;
+    const char *anclist, *urllist, *url;
+    struct mi_announce *anc;
 
-    if ((res = calloc(1, sizeof(*res))) == NULL)
+    if ((anc = calloc(1, sizeof(*anc))) == NULL)
         return NULL;
 
-    if ((alst = benc_dget_lst(p, "announce-list")) != NULL) {
-        res->ntiers = benc_nelems(alst);
-        if ((res->tiers = calloc(res->ntiers, sizeof(*res->tiers))) == NULL)
+    if ((anclist = benc_dget_lst(p, "announce-list")) != NULL) {
+        anc->ntiers = benc_nelems(anclist);
+        if ((anc->tiers = calloc(anc->ntiers, sizeof(*anc->tiers))) == NULL)
             goto error;
-        ti = 0; ulst = benc_first(alst);
-        while (ulst != NULL) {
-            res->tiers[ti].nurls = benc_nelems(ulst);
-            res->tiers[ti].urls =
-                calloc(res->tiers[ti].nurls, sizeof(*res->tiers[ti].urls));
-            if (res->tiers[ti].urls == NULL)
-                goto error;
 
-            ui = 0; url = benc_first(ulst);
-            while (url != NULL) {
-                if ((res->tiers[ti].urls[ui] =
-                        benc_str(url, NULL, NULL)) == NULL)
-                    goto error;
-                ui++; url = benc_next(url);
+        ti = 0; urllist = benc_first(anclist);
+        while (urllist != NULL) {
+            if (mi_urls(&anc->tiers[ti], urllist) == NULL) {
+                goto error;
             }
 
-            ti++; ulst = benc_next(ulst);
+            ti++; urllist = benc_next(urllist);
         }
     } else {
-        res->ntiers = 1;
-        if ((res->tiers = calloc(1, sizeof(*res->tiers))) == NULL)
+        anc->ntiers = 1;
+        if ((anc->tiers = calloc(1, sizeof(*anc->tiers))) == NULL)
             goto error;
-        res->tiers[0].nurls = 1;
-        if ((res->tiers[0].urls =
-                calloc(1, sizeof(*res->tiers[0].urls))) == NULL)
+        anc->tiers[0].nurls = 1;
+        if ((anc->tiers[0].urls =
+                calloc(1, sizeof(*anc->tiers[0].urls))) == NULL)
             goto error;
-        if ((res->tiers[0].urls[0] =
+        if ((anc->tiers[0].urls[0] =
                 benc_dget_str(p, "announce", NULL)) == NULL)
             goto error;
     }
-    mi_shuffle_announce(res);
-    return res;
+    mi_shuffle_announce(anc);
+    return anc;
 
 error:
-    if (res != NULL)
-        mi_free_announce(res);
+    if (anc != NULL)
+        mi_free_announce(anc);
     return NULL;
 }
 
@@ -301,10 +323,10 @@ mi_test_files(const char *files)
 }
 
 static int
-mi_test_announce_list(const char *alst)
+mi_test_announce_list(const char *alist)
 {
     int lstcount = 0;
-    const char *t = benc_first(alst);
+    const char *t = benc_first(alist);
     while (t != NULL && benc_islst(t)) {
         int strcount = 0;
         const char *s = benc_first(t);
@@ -324,7 +346,7 @@ int
 mi_test(const char *p, size_t size)
 {
     const char *info;
-    const char *alst;
+    const char *alist;
     const char *pieces;
     const char *files;
     const char *fdct;
@@ -335,10 +357,10 @@ mi_test(const char *p, size_t size)
     if (benc_validate(p, size) != 0 || !benc_isdct(p))
         return 0;
 
-    if ((alst = benc_dget_any(p, "announce-list")) != NULL) {
-        if (!benc_islst(alst))
+    if ((alist = benc_dget_any(p, "announce-list")) != NULL) {
+        if (!benc_islst(alist))
             return 0;
-        if (!mi_test_announce_list(alst))
+        if (!mi_test_announce_list(alist))
             return 0;
     } else if (benc_dget_mem(p, "announce", NULL) == NULL)
         return 0;
